@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 class RFRNNActivation(nn.Module):
     # initialization
@@ -15,9 +16,14 @@ class RFRNNActivation(nn.Module):
         self.v_b = nn.Parameter(torch.full((hidden_size,), init_v_b))
 
     # forward pass
-    def forward(self, v_in, w_to_l: float = 2.0, abs_v_th: float = 0.6):
-        # input tensor dimension: [batch_size, sequence_length, input_size]
-        
+    def forward(self, v_in):
+        # input tensor dimension: [batch_size, sequence_length, hidden_size] (batch_first=True)
+        x_t = v_in[:, :]
 
         # define piecewise funciton
-        func2 = 
+        func_term1 = (x_t - (self.v_b + self.abs_v_th)) ** (4/5)
+        func_term2 = ((self.v_b + self.abs_v_th) - (15 * np.pi * self.w_to_l * np.sqrt(2*x_t) / 16)) ** (1/5)
+        y_t = func_term1 * func_term2
+
+        # return piece-wise tensor
+        return torch.where(x_t > self.v_b + self.abs_v_th, y_t, 0)

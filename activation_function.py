@@ -18,7 +18,7 @@ class RFRNNActivation(nn.Module):
     # forward pass
     def forward(self, v_in):
         # input tensor dimension: [batch_size, sequence_length, hidden_size] (batch_first=True)
-        x_t = v_in[:, :]
+        x_t = v_in
 
         # define piecewise funciton
         func_term1 = (x_t - (self.v_b + self.abs_v_th)) ** (4/5)
@@ -27,3 +27,16 @@ class RFRNNActivation(nn.Module):
 
         # return piece-wise tensor
         return torch.where(x_t > self.v_b + self.abs_v_th, y_t, 0)
+    
+
+# TESTING
+# hidden_size = 4
+# init_v_b = 1.6
+# act_fnc = RFRNNActivation(hidden_size=hidden_size, init_v_b=init_v_b)
+
+# batch_size = 4
+# seq_len = 100
+
+# data = -torch.ones((batch_size, seq_len, hidden_size))
+# output = act_fnc.forward(data[:, -1, :])
+# print(output)

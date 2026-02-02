@@ -1,0 +1,187 @@
+clear;
+clc;
+
+%%% function declarations %%%
+% generates a raw binary data
+function data = generate_data(M, numSymbols)
+    % compute parameters
+    bitsPerSym = log2(M);
+    numBits = bitsPerSym * numSymbols;
+
+    % generate a random binary sequence
+    data = randi([0 1], numBits, 1);
+end
+
+% converts binary data into M-QAM signal
+function txCarrier = sample_data(data, fs, fc, M, symbolRate)
+    % convert binary signal into M-QAM signal
+    qamSymbols = qammod(data, M, 'InputType', 'bit', 'UnitAveragePower', true);
+    
+    % upsample and pulse shape
+    samplesPerSymbol = round(fs / symbolRate);
+    txSignal = upfirdn(qamSymbols, rcosdesign(0.35, 4, samplesPerSymbol), samplesPerSymbol);
+    
+    % create the time vector
+    t = (0:length(txSignal)-1)' / fs;
+    
+    % modulate up to carrier frequency (1 GHz)
+    txCarrier = real(txSignal .* exp(1j*2*pi*fc*t));
+end
+
+% split and store the signal into certain sizes
+function dir = split_store_sample(idx, data, len)
+    % create a new directory if the directory doesn't exist
+    dir = sprintf('%0.3d', idx)
+    if(exist(dir, 'dir'))
+        dir = '000';
+        return;
+    end
+    mkdir(dir);
+
+    % split the sample and store
+    for i = 1:len:length(data)
+        % compute filename
+        filename = sprintf('/%0.3d.csv', uint16(i/len)+1);
+        filename = append(dir, filename);
+
+        % store the splitted data
+        writematrix(data(i:min([i+len, length(data)])), filename);
+    end
+end
+
+% generate a point anomaly with the size of 2T
+function gaus_kernel = generate_gaus(T, shape, k)
+    % when T=0, inject impulse noise with randomized amplitude
+    if T == 0
+        gaus_kernel = 2 * k * (rand - 0.5);
+        return;
+    end
+
+    % noise parameters
+    sigma = T/3;
+    x = -T:T;
+
+    % bell shape template
+    org_gaus = exp(-x.^2 / (2*sigma^2));
+
+    % select shape of the noise
+    switch(shape)
+        case 0
+            gaus_kernel = org_gaus;
+        case 1
+            gaus_kernel = (-x / sigma^2) .* org_gaus;
+        case 2
+            gaus_kernel = (x.^2/sigma^4 - 1/sigma^2) .* org_gaus;
+    end
+
+    % normalize the kernel
+    gaus_kernel = gaus_kernel ./ norm(gaus_kernel);
+
+    % add randomization
+    err = 2 * k * (rand(size(gaus_kernel)) - 0.5);
+    gaus_kernel = gaus_kernel + err;
+end
+
+% select the duration of the noise
+function duration = select_shape()
+    % generate a random number
+    num = rand;
+
+    % select the shape by range
+    if(num < 1/32)
+        duration = 5;
+    elseif(num < 1/16)
+        duration = 4;
+    elseif(num < 1/8)
+        duration = 3;
+    elseif(num < 1/4)
+        duration = 2;
+    elseif(num < 1/2)
+        duration = 1;
+    else
+        duration = 0;
+    end
+end
+
+% inject point anomalies to all the csv files referred by the directory
+function add_point_anomalies(idx)
+    % check if the directory exists
+    dir_name = sprintf('%0.3d', idx);
+    if(~exist(dir_name, 'dir'))
+        % directory doesn't exist
+        disp('directory does not exist');
+        return;
+    end
+
+    % iterate through all the csv file under the directory
+    files = dir(fullfile(dir_name, '*.csv'));
+    for file_index = 1:length(files)
+        % load the csv file
+        file_name = files(file_index).name;
+        data = readmatrix(file_name);
+
+
+    end
+end
+
+% inject point anomalies to the input signal (M-QAM signal)
+function result = add_point_anomalies(data, N)
+    % copy the original data
+    result = data;
+
+    % get the standard deviation of the signal (used for noise amplitude
+    % calculation)
+    data_std = std(result);
+
+    % get N amount of indices to inject anomalies
+    rnd_index = randperm(numel(result), N);
+
+    % iteratively add noise
+    for idx = rnd_index
+        % determine the amplitude of the peak
+        k = 0.5 * rand + 0.25;
+
+        % randomize the polarity
+        polar = randi([0 1]);
+        if(polar == 0)
+            result(idx) = result(idx) + k * data_std;
+        else
+            result(idx) = result(idx) - k * data_std;
+        end
+    end
+end
+
+% parameters for signal generation
+M = 16;             % order of QAM
+numSymbols = 1000;  % number of symbols in the data
+fs = 5e9;           % sampling frequency (i.e. 5 GHz)
+fc = 1e9;           % carrier frequency (i.e. 1 GHz)
+symbolRate = 100e6; % symbol rate (i.e. 100 MHz)
+
+% generate random binary signal
+data = generate_data(M, numSymbols);
+
+% sample the signal with certain sampling frequency
+sample = sample_data(data, fs, fc, M, symbolRate);
+
+% split and store the data
+len = 1000;
+dir = split_store_sample(1, sample, len);
+
+% add sequence anomalies
+num_anom = 1000;
+result = add_point_anomalies(sample, num_anom);
+
+figure;
+plot(sample(1:2000));
+xlabel('Time (µs)');
+ylabel('Amplitude');
+title('1 GHz 16-QAM Signal');
+grid on;
+
+figure;
+plot(result(1:2000));
+xlabel('Time');
+ylabel('Amplitude');
+title('Sequence Anomalies Injected');
+grid on;

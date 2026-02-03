@@ -89,18 +89,35 @@ function duration = select_shape()
 
     % select the shape by range
     if(num < 1/32)
+        % (T=11): 3.125 (%)
         duration = 5;
     elseif(num < 1/16)
+        % (T=9): 3.125 (%)
         duration = 4;
     elseif(num < 1/8)
+        % (T=7): 6.25 (%)
         duration = 3;
     elseif(num < 1/4)
+        % (T=5): 12.5 (%)
         duration = 2;
     elseif(num < 1/2)
+        % (T=3): 25 (%)
         duration = 1;
     else
+        % (T=1): 50 (%)
         duration = 0;
     end
+end
+
+% inject point anomalies to a single csv file
+function add_point_to_data(data)
+    % set the maximum amount of point anomalies to 1% of the data length
+    N = randi([1, length(data)/100]);
+
+    % utilize a mask for avoid overlapping of noise
+    mask = zeros_like(like=data);
+
+    % randomly select indices
 end
 
 % inject point anomalies to all the csv files referred by the directory

@@ -45,7 +45,7 @@ function dir = split_store_sample(idx, data, len)
         filename = append(dir, filename);
 
         % store the splitted data
-        writematrix(data(i:min([i+len, length(data)])), filename);
+        writematrix(data(i:min([i+len-1, length(data)])), filename);
     end
 end
 
@@ -110,18 +110,71 @@ function duration = select_shape()
 end
 
 % inject point anomalies to a single csv file
-function add_point_to_data(data)
+function [corrupted_data, count] = add_point_to_data(data)
     % set the maximum amount of point anomalies to 1% of the data length
-    N = randi([1, length(data)/100]);
+    N = randi([1, ceil(length(data)/100)]);
 
     % utilize a mask for avoid overlapping of noise
-    mask = zeros_like(like=data);
+    mask = zeros(size(data));
 
-    % randomly select indices
+    % utilize standard deviation of the signal for noise amplitude
+    noise_amp = std(data) * (0.5 + 0.1 * (rand - 0.5));
+    % noise_amp = 10 * std(data);
+    % noise_amp = (max(data) - min(data));
+
+    % randomly select N indices
+    rnd_index = randperm(numel(data), N);
+
+    % count variable for # of noises
+    count = 0;
+
+    % copy the clean data to the result
+    corrupted_data = data;
+
+    % iteratively inject noise
+    for idx = rnd_index
+        % select the duration and shape of the noise
+        duration = select_shape();
+        shape = randi([0 2]);
+
+        % set the range of noise
+        idx_min = max([1 idx-duration]);
+        idx_max = min([idx+duration length(data)]);
+        noise_idx_min = (duration+1)-(idx-idx_min);
+        noise_idx_max = (duration+1)+(idx_max-idx);
+
+        % check if the range is already occupied
+        is_occupied = ismember(1, mask(idx_min:idx_max));
+        if(is_occupied)
+            % skip noise injection for the index
+            continue;
+        end
+
+        % generate noise
+        k = 0.1;        % random noise coefficient to the point anomaly kernel
+        gaus_kernel = generate_gaus(duration, shape, k) .* noise_amp;
+
+        % inject noise to signal
+        a = data(idx_min:idx_max);
+        b = gaus_kernel(noise_idx_min:noise_idx_max)';
+        corrupted_data(idx_min:idx_max) = a + b;
+
+        % update the mask
+        mask(idx_min:idx_max) = 1;
+
+        % update noise count
+        count = count + 1;
+    end
+
+    % zero-extend the corrupted data if short
+
 end
 
 % inject point anomalies to all the csv files referred by the directory
-function add_point_anomalies(idx)
+function count = add_point_anomalies(idx)
+    % set count to 0
+    count = 0;
+
     % check if the directory exists
     dir_name = sprintf('%0.3d', idx);
     if(~exist(dir_name, 'dir'))
@@ -134,38 +187,59 @@ function add_point_anomalies(idx)
     files = dir(fullfile(dir_name, '*.csv'));
     for file_index = 1:length(files)
         % load the csv file
-        file_name = files(file_index).name;
+        file_name = append('/',files(file_index).name);
+        file_name = append(dir_name, file_name);
         data = readmatrix(file_name);
 
+        % inject point anomaly
+        [corrupted_data, count] = add_point_to_data(data);
 
+        % store the data to csv file
+        writematrix(corrupted_data, file_name);
     end
+
+    % DEBUG
+    fprintf('add_point_anomalies>length(files): %d\n', length(files));
 end
 
-% inject point anomalies to the input signal (M-QAM signal)
-function result = add_point_anomalies(data, N)
-    % copy the original data
-    result = data;
+% % inject point anomalies to the input signal (M-QAM signal)
+% function result = add_point_anomalies(data, N)
+%     % copy the original data
+%     result = data;
 
-    % get the standard deviation of the signal (used for noise amplitude
-    % calculation)
-    data_std = std(result);
+%     % get the standard deviation of the signal (used for noise amplitude
+%     % calculation)
+%     data_std = std(result);
 
-    % get N amount of indices to inject anomalies
-    rnd_index = randperm(numel(result), N);
+%     % get N amount of indices to inject anomalies
+%     rnd_index = randperm(numel(result), N);
 
-    % iteratively add noise
-    for idx = rnd_index
-        % determine the amplitude of the peak
-        k = 0.5 * rand + 0.25;
+%     % iteratively add noise
+%     for idx = rnd_index
+%         % determine the amplitude of the peak
+%         k = 0.5 * rand + 0.25;
 
-        % randomize the polarity
-        polar = randi([0 1]);
-        if(polar == 0)
-            result(idx) = result(idx) + k * data_std;
-        else
-            result(idx) = result(idx) - k * data_std;
-        end
-    end
+%         % randomize the polarity
+%         polar = randi([0 1]);
+%         if(polar == 0)
+%             result(idx) = result(idx) + k * data_std;
+%         else
+%             result(idx) = result(idx) - k * data_std;
+%         end
+%     end
+% end
+
+function disp_sample(filename)
+    % read csv file
+    data = readmatrix(filename);
+
+    % plot data
+    figure;
+    plot(data(1:length(data)));
+    xlabel('Time (ns)');
+    ylabel('Amplitude');
+    title('1 GHz 16-QAM Signal');
+    grid on;
 end
 
 % parameters for signal generation
@@ -186,19 +260,22 @@ len = 1000;
 dir = split_store_sample(1, sample, len);
 
 % add sequence anomalies
-num_anom = 1000;
-result = add_point_anomalies(sample, num_anom);
+count = add_point_anomalies(1);
 
-figure;
-plot(sample(1:2000));
-xlabel('Time (µs)');
-ylabel('Amplitude');
-title('1 GHz 16-QAM Signal');
-grid on;
+% DEBUG
+disp_sample('001/051.csv');
+fprintf('Amount of injected point anomaly: %d\n', count);
 
-figure;
-plot(result(1:2000));
-xlabel('Time');
-ylabel('Amplitude');
-title('Sequence Anomalies Injected');
-grid on;
+% figure;
+% plot(sample(1:2000));
+% xlabel('Time (µs)');
+% ylabel('Amplitude');
+% title('1 GHz 16-QAM Signal');
+% grid on;
+
+% figure;
+% plot(result(1:2000));
+% xlabel('Time');
+% ylabel('Amplitude');
+% title('Sequence Anomalies Injected');
+% grid on;

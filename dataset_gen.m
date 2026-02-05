@@ -159,7 +159,7 @@ function [corrupted_data, count] = add_point_to_data(data, data_len)
         b = gaus_kernel(noise_idx_min:noise_idx_max)';
 
         % determine noise coefficients and the polarity
-        noise_coef = 0.1 + (0.1 * rand);
+        noise_coef = 0.2 + (0.1 * rand);
         polar = randi([0 1]);
         if(polar == 0)
             noise_coef = -noise_coef;
@@ -172,14 +172,6 @@ function [corrupted_data, count] = add_point_to_data(data, data_len)
         % update noise count
         count = count + 1;
     end
-
-    % zero-extend (trail) the corrupted data if short
-    if(length(data) < data_len)
-        % create full size zero vector
-        new_corrupted_data = zeros(1, data_len);
-        new_corrupted_data(1:length(corrupted_data)) = corrupted_data(:);
-        corrupted_data = new_corrupted_data;
-    end
 end
 
 % inject point anomalies to all the csv files referred by the directory
@@ -191,6 +183,10 @@ function count = add_point_anomalies(idx, data_len)
         disp('directory does not exist');
         return;
     end
+
+    % create a new directory
+    new_dir = sprintf('%0.3d/', idx+1);
+    mkdir(new_dir);
 
     % iterate through all the csv file under the directory
     files = dir(fullfile(dir_name, '*.csv'));
@@ -206,10 +202,55 @@ function count = add_point_anomalies(idx, data_len)
         % DEBUG
         fprintf('Injected anomaly count(%s): %d\n', file_name, count);
 
+        % setup a new filename
+        new_file_name = append(new_dir, files(file_index).name);
+
         % store the data to csv file
-        writematrix(corrupted_data, file_name);
+        writematrix(corrupted_data, new_file_name);
     end
 end
+
+% invert the samples in time domain for data augmentation
+function dir = flip_samples(src_idx)
+    % check source directory
+    src_dir = sprintf('%0.3d', src_idx)
+    if(exist(src_dir, 'dir'))
+        dir = '000';
+        return;
+    end
+
+    % create new target directory
+    dir = sprintf('%0.3d/', src_idx+2);
+    mkdir(dir);
+
+    % iterate through all the csv file under the source directory
+    files = dir(fullfile(src_dir, '*.csv'));
+    for file_index = 1:length(files)
+        % load the csv file
+        file_name = append('/',files(file_index).name);
+        file_name = append(dir_name, file_name);
+        data = readmatrix(file_name);
+
+        % flip the data
+        flipped_data = flip(data);
+
+        % setup a new filename
+        new_file_name = append(dir, files(file_index).name);
+
+        % store the data to csv file
+        writematrix(flipped_data, new_file_name);
+    end
+end
+
+% zero padding the splitted data (leading / trailing)
+function zero_padding(src_idx)
+    % check source directory
+    src_dir = sprintf('%0.3d', src_idx)
+    if(exist(src_dir, 'dir'))
+        return;
+    end
+
+    
 
 % % inject point anomalies to the input signal (M-QAM signal)
 % function result = add_point_anomalies(data, N)

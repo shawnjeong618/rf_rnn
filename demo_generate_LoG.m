@@ -42,78 +42,82 @@ function noised = add_white_noise(mask, k)
 end
 
 % DEBUG (T = 2)
-T = 2;
+T = 1;
+impuls = .75;
 noise_0 = generate_gaus_0(T);
 noise_1 = generate_gaus_1(T);
 noise_2 = generate_gaus_2(T);
 
-% plotting
-figure;
-subplot(3, 2, 1);
-plot(-T:T, noise_0, 'LineWidth', 2);
-title(['Gaussian function (\sigma = ' num2str(T/3) ')']);
-grid on;
-subplot(3, 2, 3);
-plot(-T:T, noise_1, 'LineWidth', 2);
-title(['First order derivative (\sigma = ' num2str(T/3) ')']);
-grid on;
-subplot(3, 2, 5);
-plot(-T:T, noise_2, 'LineWidth', 2);
-title(['Second order derivative (\sigma = ' num2str(T/3) ')']);
-grid on;
+% power analysis
+fprintf('impulse: %d\ngaus_0: %d\ngaus_1: %d\ngaus_2: %d\n', impuls, std(noise_0), std(noise_1), std(noise_2));
 
-% randomization
-k = 0.05;
-noised_0 = add_white_noise(noise_0, k);
-subplot(3, 2, 2);
-plot(-T:T, noised_0, 'LineWidth', 2);
-title(['Gaussian with randomization (k = ' num2str(k) ')']);
-grid on;
-noised_1 = add_white_noise(noise_1, k);
-subplot(3, 2, 4);
-plot(-T:T, noised_1, 'LineWidth', 2);
-title(['Gaussian with randomization (k = ' num2str(k) ')']);
-grid on;
-noised_2 = add_white_noise(noise_2, k);
-subplot(3, 2, 6);
-plot(-T:T, noised_2, 'LineWidth', 2);
-title(['Gaussian with randomization (k = ' num2str(k) ')']);
-grid on;
+% % plotting
+% figure;
+% subplot(3, 2, 1);
+% plot(-T:T, noise_0, 'LineWidth', 2);
+% title(['Gaussian function (\sigma = ' num2str(T/3) ')']);
+% grid on;
+% subplot(3, 2, 3);
+% plot(-T:T, noise_1, 'LineWidth', 2);
+% title(['First order derivative (\sigma = ' num2str(T/3) ')']);
+% grid on;
+% subplot(3, 2, 5);
+% plot(-T:T, noise_2, 'LineWidth', 2);
+% title(['Second order derivative (\sigma = ' num2str(T/3) ')']);
+% grid on;
 
-% DEBUG (T = 7)
-T = 7;
-noise_0 = generate_gaus_0(T);
-noise_1 = generate_gaus_1(T);
-noise_2 = generate_gaus_2(T);
+% % randomization
+% k = 0.05;
+% noised_0 = add_white_noise(noise_0, k);
+% subplot(3, 2, 2);
+% plot(-T:T, noised_0, 'LineWidth', 2);
+% title(['Gaussian with randomization (k = ' num2str(k) ')']);
+% grid on;
+% noised_1 = add_white_noise(noise_1, k);
+% subplot(3, 2, 4);
+% plot(-T:T, noised_1, 'LineWidth', 2);
+% title(['Gaussian with randomization (k = ' num2str(k) ')']);
+% grid on;
+% noised_2 = add_white_noise(noise_2, k);
+% subplot(3, 2, 6);
+% plot(-T:T, noised_2, 'LineWidth', 2);
+% title(['Gaussian with randomization (k = ' num2str(k) ')']);
+% grid on;
 
-% plotting
-figure
-subplot(3, 2, 1);
-plot(-T:T, noise_0, 'LineWidth', 2);
-title(['Gaussian function (\sigma = ' num2str(T/3) ')']);
-grid on;
-subplot(3, 2, 3);
-plot(-T:T, noise_1, 'LineWidth', 2);
-title(['First order derivative (\sigma = ' num2str(T/3) ')']);
-grid on;
-subplot(3, 2, 5);
-plot(-T:T, noise_2, 'LineWidth', 2);
-title(['Second order derivative (\sigma = ' num2str(T/3) ')']);
-grid on;
+% % DEBUG (T = 7)
+% T = 7;
+% noise_0 = generate_gaus_0(T);
+% noise_1 = generate_gaus_1(T);
+% noise_2 = generate_gaus_2(T);
 
-% randomization
-noised_0 = add_white_noise(noise_0, k);
-subplot(3, 2, 2);
-plot(-T:T, noised_0, 'LineWidth', 2);
-title(['Gaussian with randomization (k = ' num2str(k) ')']);
-grid on;
-noised_1 = add_white_noise(noise_1, k);
-subplot(3, 2, 4);
-plot(-T:T, noised_1, 'LineWidth', 2);
-title(['Gaussian with randomization (k = ' num2str(k) ')']);
-grid on;
-noised_2 = add_white_noise(noise_2, k);
-subplot(3, 2, 6);
-plot(-T:T, noised_2, 'LineWidth', 2);
-title(['Gaussian with randomization (k = ' num2str(k) ')']);
-grid on;
+% % plotting
+% figure
+% subplot(3, 2, 1);
+% plot(-T:T, noise_0, 'LineWidth', 2);
+% title(['Gaussian function (\sigma = ' num2str(T/3) ')']);
+% grid on;
+% subplot(3, 2, 3);
+% plot(-T:T, noise_1, 'LineWidth', 2);
+% title(['First order derivative (\sigma = ' num2str(T/3) ')']);
+% grid on;
+% subplot(3, 2, 5);
+% plot(-T:T, noise_2, 'LineWidth', 2);
+% title(['Second order derivative (\sigma = ' num2str(T/3) ')']);
+% grid on;
+
+% % randomization
+% noised_0 = add_white_noise(noise_0, k);
+% subplot(3, 2, 2);
+% plot(-T:T, noised_0, 'LineWidth', 2);
+% title(['Gaussian with randomization (k = ' num2str(k) ')']);
+% grid on;
+% noised_1 = add_white_noise(noise_1, k);
+% subplot(3, 2, 4);
+% plot(-T:T, noised_1, 'LineWidth', 2);
+% title(['Gaussian with randomization (k = ' num2str(k) ')']);
+% grid on;
+% noised_2 = add_white_noise(noise_2, k);
+% subplot(3, 2, 6);
+% plot(-T:T, noised_2, 'LineWidth', 2);
+% title(['Gaussian with randomization (k = ' num2str(k) ')']);
+% grid on;

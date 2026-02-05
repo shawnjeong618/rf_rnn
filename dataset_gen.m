@@ -53,7 +53,7 @@ end
 function gaus_kernel = generate_gaus(T, shape, k)
     % when T=0, inject impulse noise with randomized amplitude
     if T == 0
-        gaus_kernel = 2 * k * (rand - 0.5);
+        gaus_kernel = 0.75 + k * (rand - 0.5);
         return;
     end
 
@@ -78,7 +78,7 @@ function gaus_kernel = generate_gaus(T, shape, k)
     gaus_kernel = gaus_kernel ./ norm(gaus_kernel);
 
     % add randomization
-    err = 2 * k * (rand(size(gaus_kernel)) - 0.5);
+    err = k * (rand(size(gaus_kernel)) - 0.5);
     gaus_kernel = gaus_kernel + err;
 end
 
@@ -110,7 +110,7 @@ function duration = select_shape()
 end
 
 % inject point anomalies to a single csv file
-function [corrupted_data, count] = add_point_to_data(data)
+function [corrupted_data, count] = add_point_to_data(data, data_len)
     % set the maximum amount of point anomalies to 1% of the data length
     N = randi([1, ceil(length(data)/100)]);
 
@@ -118,7 +118,7 @@ function [corrupted_data, count] = add_point_to_data(data)
     mask = zeros(size(data));
 
     % utilize standard deviation of the signal for noise amplitude
-    noise_amp = std(data) * (0.5 + 0.1 * (rand - 0.5));
+    % noise_amp = std(data) * (0.5 + 0.1 * (rand - 0.5));
     % noise_amp = 10 * std(data);
     % noise_amp = (max(data) - min(data));
 
@@ -152,12 +152,19 @@ function [corrupted_data, count] = add_point_to_data(data)
 
         % generate noise
         k = 0.1;        % random noise coefficient to the point anomaly kernel
-        gaus_kernel = generate_gaus(duration, shape, k) .* noise_amp;
+        gaus_kernel = generate_gaus(duration, shape, k);
 
         % inject noise to signal
         a = data(idx_min:idx_max);
         b = gaus_kernel(noise_idx_min:noise_idx_max)';
-        corrupted_data(idx_min:idx_max) = a + b;
+
+        % determine noise coefficients and the polarity
+        noise_coef = 0.1 + (0.1 * rand);
+        polar = randi([0 1]);
+        if(polar == 0)
+            noise_coef = -noise_coef;
+        end
+        corrupted_data(idx_min:idx_max) = a + noise_coef * b;
 
         % update the mask
         mask(idx_min:idx_max) = 1;
@@ -166,15 +173,17 @@ function [corrupted_data, count] = add_point_to_data(data)
         count = count + 1;
     end
 
-    % zero-extend the corrupted data if short
-
+    % zero-extend (trail) the corrupted data if short
+    if(length(data) < data_len)
+        % create full size zero vector
+        new_corrupted_data = zeros(1, data_len);
+        new_corrupted_data(1:length(corrupted_data)) = corrupted_data(:);
+        corrupted_data = new_corrupted_data;
+    end
 end
 
 % inject point anomalies to all the csv files referred by the directory
-function count = add_point_anomalies(idx)
-    % set count to 0
-    count = 0;
-
+function count = add_point_anomalies(idx, data_len)
     % check if the directory exists
     dir_name = sprintf('%0.3d', idx);
     if(~exist(dir_name, 'dir'))
@@ -192,14 +201,14 @@ function count = add_point_anomalies(idx)
         data = readmatrix(file_name);
 
         % inject point anomaly
-        [corrupted_data, count] = add_point_to_data(data);
+        [corrupted_data, count] = add_point_to_data(data, data_len);
+
+        % DEBUG
+        fprintf('Injected anomaly count(%s): %d\n', file_name, count);
 
         % store the data to csv file
         writematrix(corrupted_data, file_name);
     end
-
-    % DEBUG
-    fprintf('add_point_anomalies>length(files): %d\n', length(files));
 end
 
 % % inject point anomalies to the input signal (M-QAM signal)
@@ -260,11 +269,12 @@ len = 1000;
 dir = split_store_sample(1, sample, len);
 
 % add sequence anomalies
-count = add_point_anomalies(1);
+count = add_point_anomalies(1, len);
 
 % DEBUG
-disp_sample('001/051.csv');
+disp_sample('001/050.csv');
 fprintf('Amount of injected point anomaly: %d\n', count);
+fprintf('max-min of data: %d\n', max(data)-min(data));
 
 % figure;
 % plot(sample(1:2000));

@@ -200,7 +200,7 @@ function count = add_point_anomalies(idx, data_len)
         [corrupted_data, count] = add_point_to_data(data, data_len);
 
         % DEBUG
-        fprintf('Injected anomaly count(%s): %d\n', file_name, count);
+        %fprintf('Injected anomaly count(%s): %d\n', file_name, count);
 
         % setup a new filename
         new_file_name = append(new_dir, files(file_index).name);
@@ -211,31 +211,30 @@ function count = add_point_anomalies(idx, data_len)
 end
 
 % invert the samples in time domain for data augmentation
-function dir = flip_samples(src_idx)
+function flip_samples(src_idx)
     % check source directory
-    src_dir = sprintf('%0.3d', src_idx)
-    if(exist(src_dir, 'dir'))
-        dir = '000';
+    src_dir = sprintf('%0.3d', src_idx);
+    if(~exist(src_dir, 'dir'))
         return;
     end
 
     % create new target directory
-    dir = sprintf('%0.3d/', src_idx+2);
-    mkdir(dir);
+    new_dir = sprintf('%0.3d/', src_idx+2);
+    mkdir(new_dir);
 
     % iterate through all the csv file under the source directory
     files = dir(fullfile(src_dir, '*.csv'));
     for file_index = 1:length(files)
         % load the csv file
         file_name = append('/',files(file_index).name);
-        file_name = append(dir_name, file_name);
+        file_name = append(src_dir, file_name);
         data = readmatrix(file_name);
 
         % flip the data
         flipped_data = flip(data);
 
         % setup a new filename
-        new_file_name = append(dir, files(file_index).name);
+        new_file_name = append(new_dir, files(file_index).name);
 
         % store the data to csv file
         writematrix(flipped_data, new_file_name);
@@ -243,14 +242,40 @@ function dir = flip_samples(src_idx)
 end
 
 % zero padding the splitted data (leading / trailing)
-function zero_padding(src_idx)
+function zero_padding(src_idx, data_len)
     % check source directory
-    src_dir = sprintf('%0.3d', src_idx)
-    if(exist(src_dir, 'dir'))
+    src_dir = sprintf('%0.3d', src_idx);
+    if(~exist(src_dir, 'dir'))
         return;
     end
 
-    
+    % iterate through all the csv files under the source directory
+    files = dir(fullfile(src_dir, '*.csv'));
+    for file_index = 1:length(files)
+        % load the csv file
+        file_name = append('/', files(file_index).name);
+        file_name = append(src_dir, file_name);
+        data = readmatrix(file_name);
+
+        % skip if the length(data) == data_len
+        if(length(data) == data_len)
+            continue;
+        end
+
+        % divide trailing and leading zero cases
+        new_data = zeros(data_len, 1);
+        if(mod(src_idx-1, 4) < 2)
+            % create zero-trailing vector
+            new_data(1:length(data)) = data(:);
+        else
+            % create zero-leading vector
+            new_data(data_len-length(data)+1:data_len) = data(:);
+        end
+
+        % store teh data to csv file
+        writematrix(new_data, file_name);        
+    end
+end
 
 % % inject point anomalies to the input signal (M-QAM signal)
 % function result = add_point_anomalies(data, N)
@@ -299,34 +324,36 @@ fs = 5e9;           % sampling frequency (i.e. 5 GHz)
 fc = 1e9;           % carrier frequency (i.e. 1 GHz)
 symbolRate = 100e6; % symbol rate (i.e. 100 MHz)
 
-% generate random binary signal
-data = generate_data(M, numSymbols);
+% parameters for dataset generation
+total_signals = 25;
+data_len = 1000;
 
-% sample the signal with certain sampling frequency
-sample = sample_data(data, fs, fc, M, symbolRate);
+% iteratively generate data
+for src_idx = 1:4:4*(total_signals)
+    % generate random binary signal
+    data = generate_data(M, numSymbols);
 
-% split and store the data
-len = 1000;
-dir = split_store_sample(1, sample, len);
+    % sample the signal with certain sampling frequency
+    sample = sample_data(data, fs, fc, M, symbolRate);
 
-% add sequence anomalies
-count = add_point_anomalies(1, len);
+    % split and store the data (splits original template)
+    dir = split_store_sample(src_idx, sample, data_len);
+
+    % add sequence anomalies and stores to the (4N-3) file
+    count = add_point_anomalies(src_idx, data_len);
+
+    % flip the original and noisy samples
+    flip_samples(src_idx);
+    flip_samples(src_idx+1);
+
+    % zero pad all the related data
+    zero_padding(src_idx, data_len);
+    zero_padding(src_idx+1, data_len);
+    zero_padding(src_idx+2, data_len);
+    zero_padding(src_idx+3, data_len);
+end
 
 % DEBUG
 disp_sample('001/050.csv');
 fprintf('Amount of injected point anomaly: %d\n', count);
 fprintf('max-min of data: %d\n', max(data)-min(data));
-
-% figure;
-% plot(sample(1:2000));
-% xlabel('Time (µs)');
-% ylabel('Amplitude');
-% title('1 GHz 16-QAM Signal');
-% grid on;
-
-% figure;
-% plot(result(1:2000));
-% xlabel('Time');
-% ylabel('Amplitude');
-% title('Sequence Anomalies Injected');
-% grid on;

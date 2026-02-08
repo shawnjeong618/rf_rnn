@@ -1,5 +1,5 @@
 import random, json, os, copy
-from rf_hybrid import RFHybrid
+from rf_rnn import RFRNN
 import torch
 from data_loader import CSVSequenceDataset
 from torch.utils.data import DataLoader, random_split

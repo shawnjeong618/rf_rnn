@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from activation_function import RFRNNActivation     # custom activation function
+from activation_function import RFRNNActivation2     # custom activation function
 
 class RFRNN(nn.Module):
     # class definition
@@ -12,36 +12,40 @@ class RFRNN(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.seq_len = seq_len
+        self.output_size = output_size
 
         # activation function
-        self.act_func = RFRNNActivation(hidden_size=hidden_size,
-                                        init_v_b=0.0)
+        self.act_func = RFRNNActivation2(hidden_size=hidden_size)
 
         # model parameter intialization
         # (1) W_t1: input-to-hidden_state weight
         self.wt1 = nn.Linear(in_features=self.input_size,
-                             out_features=self.hidden_size,
-                             bias=False)
-        # (2) W_t2: hiddenstate-to-hidden_state weight
+                            out_features=self.hidden_size,
+                            bias=False)
+        # (2) W_t2: hidden_state-to-hidden_state weight
         self.wt2 = nn.Linear(in_features=self.hidden_size,
-                             out_features=self.hidden_size,
-                             bias=False)
+                            out_features=self.hidden_size,
+                            bias=False)
         # bias parameter (V_b) is stored inside the activation function
         # as a trainable parameter.
+        # (3) h_o: hidden_state-to-output weight
+        self.h_o = nn.Linear(in_features=self.hidden_size,
+                            out_features=self.output_size,
+                            bias=False) 
 
     # forward function
     # the function assumes an input dimension of [batch_size, seq_len, hidden_size]
-    def forward(self, x, hx=None):
+    def forward(self, x, h_t_minus_1=None):
         # analyze the input dimension
-        batch_size, seq_len, _ = x.size()
+        batch_size, _, _ = x.shape
 
         # assume hidden_state=0 unless it was set
-        if hx is None:
+        if h_t_minus_1 is None:
             # zero-initialize the tensor (hidden_size,)
-            hx = torch.zeros(batch_size, self.hidden_size)
-
-        # copy hidden state
-        h_t_minus_1 = hx.clone()
+            h_t_minus_1 = torch.zeros(batch_size,
+                                    self.hidden_size,
+                                    device=x.device,
+                                    dtype=x.dtype)
 
         # iteratevly forward the RNN sequence
         for t in range(self.seq_len):
@@ -49,21 +53,28 @@ class RFRNN(nn.Module):
             input_t = x[:, t, :]
 
             # compute the output from the activation function and update the hidden state
-            v_in = (self.wt1 @ input_t) + (self.wt2 @ h_t_minus_1)
+            v_in = self.wt1(input_t) + self.wt2(h_t_minus_1)
             h_t_minus_1 = self.act_func.forward(v_in)
         
-        # return the newest hidden state as the output
-        return h_t_minus_1
-    
-# TEST
+        # perform linear tranformation of hidden_state to output
+        return self.h_o(h_t_minus_1)
 
-# variables
-hidden_size = 4
-output_size = 2
-seq_len = 100
-batch_size = 32
+    # weight initialization
+    def init_hidden(self, batch_size):
+        return torch.zeros(batch_size, self.hidden_size)
 
-init_v_b = 1.6
+# # variables
+# input_size = 1
+# hidden_size = 4
+# output_size = 2
+# seq_len = 100
+# batch_size = 32
+# init_v_b = 0.5
 
-# model initialization
-rnn = RFRNN(hidden_size=hidden_size, seq_len=seq_len, output_size=output_size)
+# # model initialization
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model = RFRNN(hidden_size=hidden_size, seq_len=seq_len, output_size=output_size).to(device)
+# input = torch.ones(batch_size, seq_len, input_size).to(device)     # input
+# model.eval()        # evaluation mode
+# output = model(input)
+# print(output)

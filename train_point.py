@@ -8,6 +8,11 @@ import torch.nn as nn
 import pandas as pd
 import numpy as np
 
+# architecture variables
+hidden_size = 6
+seq_len = 1000
+output_size = 2
+
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 64
@@ -19,9 +24,9 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # load dataset
-manifest = "manifest_point.csv"
+manifest = "manifest.csv"
 label_map = {"normal":0, "point":1}
-full_ds = CSVSequenceDataset(manifest, label_map=label_map, seq_len=500)
+full_ds = CSVSequenceDataset(manifest, seq_len, label_map=label_map)
 n = len(full_ds)
 n_train = int(0.8 * n)
 n_test = n - n_train
@@ -31,10 +36,11 @@ train_ds, test_ds = random_split(full_ds, [n_train, n_test], generator=torch.Gen
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=False)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False, drop_last=False)
 
+
 # define model parameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device = {torch.get_default_device()}")
-model = RFHybrid().to(device)
+print(f"Using device = {device}")
+model = RFRNN(hidden_size, seq_len, output_size).to(device)
 opt = torch.optim.Adam(model.parameters(), lr=1e-4)
 crit = nn.CrossEntropyLoss()
 
@@ -98,9 +104,9 @@ pd.DataFrame(history).to_csv("runs/metrics_point.csv", index=False)
 
 
 # GPT DEBUG
-reload_model = RFHybrid().to(device)
-reload_model.load_state_dict(torch.load("model_best.pth", map_location=device))
-reload_model.eval()
+# reload_model = RFRNN().to(device)
+# reload_model.load_state_dict(torch.load("model_best.pth", map_location=device))
+# reload_model.eval()
 
-va_loss2, va_acc2 = evaluate(test_loader, reload_model)
-print("Re-loaded checkpoint val_acc:", va_acc2)
+# va_loss2, va_acc2 = evaluate(test_loader, reload_model)
+# print("Re-loaded checkpoint val_acc:", va_acc2)

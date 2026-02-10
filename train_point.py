@@ -9,14 +9,14 @@ import pandas as pd
 import numpy as np
 
 # architecture variables
-hidden_size = 6
+hidden_size = 16
 seq_len = 1000
 output_size = 2
 
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 64
-EPOCHS = 100
+EPOCHS = 200
 
 # deterministic CUDA
 torch.manual_seed(SEED)
@@ -41,7 +41,7 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False, drop_las
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device = {device}")
 model = RFRNN(hidden_size, seq_len, output_size).to(device)
-opt = torch.optim.Adam(model.parameters(), lr=1e-4)
+opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 crit = nn.CrossEntropyLoss()
 
 # functions
@@ -70,7 +70,7 @@ def train_one_epoch():
         logits = model(x)
         loss = crit(logits, y)
         opt.zero_grad(); loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
         opt.step()
         b = x.size(0)
         tot_loss += loss.item() * b

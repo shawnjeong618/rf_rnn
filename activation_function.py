@@ -48,6 +48,9 @@ class RFRNNActivation2(nn.Module):
     def forward(self, x):
         # piece-wise tensor
         return torch.relu(x - self.v_b) * self.v_m
+
+        # try relu
+        # return torch.relu(x)
     
 
 # TESTING

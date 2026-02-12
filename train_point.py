@@ -9,14 +9,14 @@ import pandas as pd
 import numpy as np
 
 # architecture variables
-hidden_size = 16
-seq_len = 1000
+hidden_size = 8
+seq_len = 200
 output_size = 2
 
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 64
-EPOCHS = 200
+EPOCHS = 100
 
 # deterministic CUDA
 torch.manual_seed(SEED)

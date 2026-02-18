@@ -10,7 +10,7 @@ import numpy as np
 
 # architecture variables
 hidden_size = 8
-seq_len = 200
+seq_len = 100
 output_size = 2
 
 # training variables

@@ -24,6 +24,9 @@ class RFRNNActivation(nn.Module):
         # define piecewise funciton
         func_term1 = (v_in - (self.v_b + self.abs_v_th)) ** (4/5)
         func_term2 = ((self.v_b + self.abs_v_th) - (15 * torch.pi * self.w_to_l * torch.sqrt(2*v_in) / 16)) ** (1/5)
+
+        # DEBYG
+        y_t = torch.zeros_like(v_in, dtype=torch.cfloat)
         y_t = func_term1 * func_term2
         y_t_zeros = torch.zeros_like(y_t)
 
@@ -58,13 +61,13 @@ class RFRNNActivation2(nn.Module):
 
 # TESTING
 hidden_size = 1
-init_v_b = 69.0
+init_v_b = 0.5
 act_fnc = RFRNNActivation(hidden_size=hidden_size, v_b=init_v_b)
 
 batch_size = 1
 seq_len = 100
 
-data = 70.0 * torch.ones((batch_size, seq_len, hidden_size))
+data = 2.0 * torch.ones((batch_size, seq_len, hidden_size))
 output = act_fnc.forward(data[:, -1, :])
 
 print(output)

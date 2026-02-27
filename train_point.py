@@ -16,7 +16,7 @@ output_size = 2
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 64
-EPOCHS = 100
+EPOCHS = 200
 
 # deterministic CUDA
 torch.manual_seed(SEED)

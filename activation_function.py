@@ -5,7 +5,7 @@ import numpy as np
 
 class RFRNNActivation(nn.Module):
     # initialization
-    def __init__(self, hidden_size: int, v_b: float, w_to_l: float=2.0, abs_v_th: float=0.6, v_dd: float=5.0):
+    def __init__(self, hidden_size: int, v_b: float, w_to_l: float=2.0, abs_v_th: float=0.3, v_dd: float=1.2):
         # initialize trainable module
         super().__init__()
 
@@ -59,14 +59,14 @@ class RFRNNActivation2(nn.Module):
     
 
 # TESTING
-hidden_size = 1
-init_v_b = -0.6
-act_fnc = RFRNNActivation(hidden_size=hidden_size, v_b=init_v_b)
+# hidden_size = 1
+# init_v_b = -0.6
+# act_fnc = RFRNNActivation(hidden_size=hidden_size, v_b=init_v_b)
 
-batch_size = 1
-seq_len = 100
+# batch_size = 1
+# seq_len = 100
 
-data = 2.0 * torch.ones((batch_size, seq_len, hidden_size))
-output = act_fnc.forward(data[:, -1, :])
+# data = 2.0 * torch.ones((batch_size, seq_len, hidden_size))
+# output = act_fnc.forward(data[:, -1, :])
 
-print(output)
+# print(output)

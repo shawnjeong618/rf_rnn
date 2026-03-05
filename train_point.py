@@ -15,7 +15,7 @@ output_size = 2
 
 # training variables
 SEED = 0            # determinism
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 EPOCHS = 200
 
 # deterministic CUDA
@@ -41,7 +41,7 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False, drop_las
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device = {device}")
 model = RFRNN(hidden_size, seq_len, output_size).to(device)
-opt = torch.optim.Adam(model.parameters(), lr=3e-4)
+opt = torch.optim.Adam(model.parameters(), lr=1e-3)
 crit = nn.CrossEntropyLoss()
 
 # functions

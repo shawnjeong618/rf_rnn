@@ -13,10 +13,11 @@ hidden_size = 8
 seq_len = 100
 output_size = 2
 
+
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 128
-EPOCHS = 200
+EPOCHS = 250
 
 # deterministic CUDA
 torch.manual_seed(SEED)
@@ -36,13 +37,24 @@ train_ds, test_ds = random_split(full_ds, [n_train, n_test], generator=torch.Gen
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=False)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False, drop_last=False)
 
-
 # define model parameters
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device = {device}")
 model = RFRNN(hidden_size, seq_len, output_size).to(device)
-opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+# explicitly initialize the model weight
+with torch.no_grad():
+    model.act_func.w_to_l.copy_(torch.tensor([0.9627, 1.2584, 1.2450, 1.1573, 1.1016, 1.2271, 1.1092, 1.3732], device=device, dtype=model.act_func.w_to_l.dtype))
+    model.act_func.v_b.copy_(torch.tensor([0.0438, -0.0784, -0.0406,  0.0305, -0.0824,  0.0498,  0.0058, -0.0460], device=device, dtype=model.act_func.v_b.dtype))
+
+opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 crit = nn.CrossEntropyLoss()
+
+# verify model weight initialization
+print("v_b: ", model.act_func.v_b)
+print("v_m: ", model.act_func.w_to_l)
+print("v_b: ", model.act_func.v_b.shape)
+print("v_m: ", model.act_func.w_to_l.shape)
 
 # functions
 def accuracy_from_logits(logits, targets):

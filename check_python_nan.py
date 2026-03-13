@@ -1,10 +1,20 @@
 import numpy as np
+import torch
 
-x = -0.5
+x = torch.randn(3, 2)
 
-square = (x ** (1/2))
+print(x)
 
-fifth = np.sign(x) * (np.abs(x)**(1/5))
+cond = x > 0
+y = torch.where(cond, x, 0)
 
-print("sqrt(x) = ", square)
-print("x**(1/5) = ", fifth)
+print(y)
+
+z = x[cond] 
+
+print(z)
+
+w = torch.zeros_like(x)
+w[cond] = z
+
+print(w)

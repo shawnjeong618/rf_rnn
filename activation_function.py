@@ -5,12 +5,12 @@ import numpy as np
 import sys
 
 # epsilon
-eps = 1e-6
+eps = 1e-8
 
 
 class RFRNNActivation(nn.Module):
     # initialization
-    def __init__(self, hidden_size: int, v_b: float=0.5, w_to_l: float=2.0, abs_v_th: float=0.3, v_dd: float=1.8):
+    def __init__(self, hidden_size: int, v_b: float=-0.3, w_to_l: float=2.0, abs_v_th: float=0.3, v_dd: float=1.8):
         # initialize trainable module
         super().__init__()
 
@@ -45,15 +45,15 @@ class RFRNNActivation(nn.Module):
         
         # compute the first term
         base1 = (v_in - (self.v_b + self.abs_v_th))
-        term1 = torch.abs(base1).pow(0.8)
+        term1 = torch.pow(torch.abs(base1), 0.8)
 
         # compute the second term
-        sqrt_arg = torch.clamp(2.0 * v_in, min=0.0)
+        sqrt_arg = torch.clamp(2.0 * v_in, min=eps)
         base2 = (15 * torch.pi * self.w_to_l * torch.sqrt(sqrt_arg) / 16) - (self.v_b + self.abs_v_th)
-        term2 = torch.sign(base2) * torch.abs(base2).pow(0.2)
+        term2 = torch.sign(base2) * torch.pow(torch.abs(base2), 0.2)
 
         # use torch.where for piece-wise behavior
-        y = torch.where(v_in >= (self.v_b + self.abs_v_th), term1*term2, 0.0)
+        y = torch.where(v_in > (self.v_b + self.abs_v_th), term1*term2, 0.0)
 
         # use torch.where to enforce operting voltage constraint
         y_clamped = torch.where(y > self.v_dd, self.v_dd, y)
@@ -77,13 +77,17 @@ class RFRNNActivation(nn.Module):
 
 class RFRNNActivation2(nn.Module):
     # initialization
-    def __init__(self, hidden_size: int, v_b: float=0.0, v_m: float=1.0, abs_v_th: float=0.3, v_dd: float=1.8):
+    def __init__(self, hidden_size: int, v_b: float=-0.3, w_to_l: float=2.0, abs_v_th: float=0.3, v_dd: float=1.8):
         # initialize trainable module
         super().__init__()
 
-        # initialize trainable parameter
+        # (case 1) initialize trainable parameter
         self.v_b = nn.Parameter(torch.full((hidden_size,), v_b))
-        self.v_m = nn.Parameter(torch.full((hidden_size,), v_m))
+        # self.v_m = nn.Parameter(torch.full((hidden_size,), v_m))
+
+        # (case 2) fixed parameters
+        # self.register_buffer("v_b", torch.full((hidden_size, ), fill_value=v_b))
+        self.register_buffer("w_to_l", torch.full((hidden_size, ), fill_value=w_to_l))
 
         # initialize hyper parameters
         self.abs_v_th = abs_v_th
@@ -91,15 +95,20 @@ class RFRNNActivation2(nn.Module):
 
     # forward pass
     def forward(self, x):
-        # method(1): hard-clamp the parameters
-        v_b_lim = self.v_b.clamp(min=-self.abs_v_th, max=self.v_dd)
-        v_m_lim = self.v_m.clamp(min=eps)
+        # compute active region
+        active = self.w_to_l * (x - (self.v_b + self.abs_v_th))
+
+        # (case 1) clamp lower bound
+        y = torch.where(x >= self.v_b + self.abs_v_th, active, 0)
+
+        # (case 2) clamp upper bound
+        y = torch.where(y >= self.v_dd, self.v_dd, y)
+
+        # (03182026) DEBUG
+        #print(y)
 
         # piece-wise tensor
-        return torch.relu(x - self.v_b) * self.v_m
-
-        # try relu
-        # return torch.relu(x)
+        return y
     
 
 # TESTING
@@ -109,17 +118,21 @@ class RFRNNActivation2(nn.Module):
 # act_fnc_2 = RFRNNActivation2(hidden_size=hidden_size)
 
 # batch_size = 2
-# seq_len = 100
+# seq_len = 5
 
-# data = torch.rand((batch_size, seq_len, hidden_size), requires_grad=True)
+# data = 0.0 * torch.ones((batch_size, seq_len, hidden_size), requires_grad=True)
 
-# x_prev = torch.zeros_like(data[:, -1, :])
-# y = torch.zeros_like(x_prev, requires_grad=True)
+# x1 = torch.zeros_like(data[:, -1, :])
+# x2 = torch.zeros_like(x1)
+# y1 = torch.zeros_like(x1, requires_grad=True)
+# y2 = torch.zeros_like(y1, requires_grad=True)
 # for i in range(seq_len):
 #     x_t = data[:, i, :]
-#     y = act_fnc.forward(x_t + x_prev)
-#     x_prev = x_t
+#     y1 = act_fnc.forward(x_t + x1)
+#     y2 = act_fnc_2.forward(x_t + x2)
+#     x1 = x_t
+#     x2 = x_t
 
-# print(data)
-# print(y)
-# print(y.backward(torch.ones_like(data)), data.grad)
+# #print(data)
+# print(y2)
+# print(y2.backward(torch.ones_like(x1)), data.grad)

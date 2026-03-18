@@ -47,7 +47,7 @@ model = RFRNN(hidden_size, seq_len, output_size).to(device)
 #     model.act_func.w_to_l.copy_(torch.tensor([0.9627, 1.2584, 1.2450, 1.1573, 1.1016, 1.2271, 1.1092, 1.3732], device=device, dtype=model.act_func.w_to_l.dtype))
 #     model.act_func.v_b.copy_(torch.tensor([0.0438, -0.0784, -0.0406,  0.0305, -0.0824,  0.0498,  0.0058, -0.0460], device=device, dtype=model.act_func.v_b.dtype))
 
-opt = torch.optim.Adam(model.parameters(), lr=3e-5)
+opt = torch.optim.Adam(model.parameters(), lr=3e-4)
 crit = nn.CrossEntropyLoss()
 
 # verify model weight initialization
@@ -56,7 +56,11 @@ crit = nn.CrossEntropyLoss()
 # print("v_b: ", model.act_func.v_b.shape)
 # print("v_m: ", model.act_func.w_to_l.shape)
 
-# DEBUG (03132026)
+# (03182026) penalty functions
+def polynomial_penalty(param, min, max, p):
+    penalty = torch.pow((param - (min + max)/2), p)
+    return penalty.float().mean().item()
+
 
 # functions
 def accuracy_from_logits(logits, targets):
@@ -69,7 +73,11 @@ def evaluate(loader, model):
     for x, y in loader:
         x, y = x.to(device), y.to(device)
         logits = model(x)
-        loss = crit(logits, y)
+        
+        # (03182026) add penalty term
+        lambda_1 = 1.0
+        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.act_func.v_b, -model.act_func.abs_v_th, model.act_func.v_dd, 2)
+
         b = x.size(0)
         tot_loss += loss.item() * b
         tot_acc += accuracy_from_logits(logits, y) * b
@@ -82,7 +90,11 @@ def train_one_epoch():
     for x, y in train_loader:
         x, y = x.to(device), y.to(device)
         logits = model(x)
-        loss = crit(logits, y)
+
+        # (03182026) add penalty term
+        lambda_1 = 1.0
+        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.act_func.v_b, -model.act_func.abs_v_th, model.act_func.v_dd, 2)
+
         opt.zero_grad(); loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
         opt.step()
@@ -91,6 +103,9 @@ def train_one_epoch():
         tot_acc += accuracy_from_logits(logits, y) * b
         tot += b
     return tot_loss / tot, tot_acc / tot
+
+# (03162026) training anomly detection (nan)
+torch.autograd.set_detect_anomaly(True)
 
 history = []
 best_loss = float('inf')

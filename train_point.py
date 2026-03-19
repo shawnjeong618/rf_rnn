@@ -17,7 +17,7 @@ output_size = 2
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 128
-EPOCHS = 250
+EPOCHS = 100
 
 # deterministic CUDA
 torch.manual_seed(SEED)
@@ -58,7 +58,8 @@ crit = nn.CrossEntropyLoss()
 
 # (03182026) penalty functions
 def polynomial_penalty(param, min, max, p):
-    penalty = torch.pow((param - (min + max)/2), p)
+    range = max - min
+    penalty = torch.pow((2/range) * (param - (min + max)/2), p)
     return penalty.float().mean().item()
 
 

@@ -69,9 +69,74 @@ class RFRNN(nn.Module):
         # perform linear tranformation of hidden_state to output
         return self.h_o(h_t_minus_1)
 
-    # weight initialization
-    def init_hidden(self, batch_size):
-        return torch.zeros(batch_size, self.hidden_size)
+# modified definition of RFRNN
+class RFRNN2(nn.Module):
+    # class definition
+    def __init__(self, hidden_size:int,
+                 seq_len:int,
+                 output_size:int,
+                 input_size:int = 1,
+                 v_dd:float = 1.8,
+                 abs_v_th:float = 0.3):
+        # use RNN base class
+        super(RFRNN2, self).__init__()
+
+        # model architecture parameter
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.seq_len = seq_len
+        self.output_size = output_size
+
+        # other hardware parameters
+        self.v_dd = v_dd
+        self.abs_v_th = abs_v_th
+
+        # activation function
+        self.act_func = nn.ReLU()
+
+        # model parameter intialization
+        # (1) W_t1: input-to-hidden_state weight
+        self.wt1 = nn.Linear(in_features=self.input_size,
+                            out_features=self.hidden_size,
+                            bias=False)
+        # (2) W_t2: hidden_state-to-hidden_state weight
+        self.wt2 = nn.Parameter(torch.rand((hidden_size,)))
+        # (3) b: bias term
+        self.b = nn.Parameter(torch.rand((hidden_size,)))
+        # (4) h_o: hidden_state-to-output weight
+        self.h_o = nn.Linear(in_features=self.hidden_size,
+                            out_features=self.output_size,
+                            bias=False) 
+
+    # forward function
+    # the function assumes an input dimension of [batch_size, seq_len, hidden_size]
+    def forward(self, x, h_t_minus_1=None):
+        # analyze the input dimension
+        batch_size, _, _ = x.shape
+
+        # assume hidden_state=0 unless it was set
+        if h_t_minus_1 is None:
+            # zero-initialize the tensor (hidden_size,)
+            h_t_minus_1 = torch.zeros(batch_size,
+                                    self.hidden_size,
+                                    device=x.device,
+                                    dtype=x.dtype)
+
+        # iteratevly forward the RNN sequence
+        for t in range(self.seq_len):
+            # get the input at t
+            input_t = x[:, t, :]
+
+            # compute the output from the activation function and update the hidden state
+            v_in = self.wt2 * (self.wt1(input_t) + h_t_minus_1 + self.b)
+            h_t_minus_1 = self.act_func(v_in)
+
+            # (DEBUG: 03052026) V_in, V_out tracking
+            # print(f"v_in[{t}] = ", v_in)
+            # print(f"v_out[{t}] = ", h_t_minus_1)
+        
+        # perform linear tranformation of hidden_state to output
+        return self.h_o(h_t_minus_1)
 
 # # variables
 # input_size = 1

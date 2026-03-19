@@ -82,7 +82,7 @@ class RFRNNActivation2(nn.Module):
         super().__init__()
 
         # (case 1) initialize trainable parameter
-        self.v_b = nn.Parameter(torch.full((hidden_size,), v_b))
+        self.v_b = nn.Parameter(torch.full((hidden_size,), fill_value=v_dd))
         # self.v_m = nn.Parameter(torch.full((hidden_size,), v_m))
 
         # (case 2) fixed parameters
@@ -99,13 +99,13 @@ class RFRNNActivation2(nn.Module):
         active = self.w_to_l * (x - (self.v_b + self.abs_v_th))
 
         # (case 1) clamp lower bound
-        y = torch.where(x >= self.v_b + self.abs_v_th, active, 0)
+        y = torch.where(x >= self.v_b + self.abs_v_th, active, 0.0)
 
         # (case 2) clamp upper bound
-        y = torch.where(y >= self.v_dd, self.v_dd, y)
+        # y = torch.where(y >= self.v_dd, self.v_dd, y)
 
         # (03182026) DEBUG
-        #print(y)
+        print(y)
 
         # piece-wise tensor
         return y

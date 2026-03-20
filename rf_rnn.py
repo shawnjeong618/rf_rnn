@@ -100,13 +100,15 @@ class RFRNN2(nn.Module):
                             out_features=self.hidden_size,
                             bias=False)
         # (2) W_t2: hidden_state-to-hidden_state weight
-        self.wt2 = nn.Parameter(torch.rand((hidden_size,)))
+        self.wt2 = nn.Linear(in_features=self.hidden_size,
+                            out_features=self.hidden_size,
+                            bias=False)
         # (3) b: bias term
         self.b = nn.Parameter(torch.rand((hidden_size,)))
         # (4) h_o: hidden_state-to-output weight
         self.h_o = nn.Linear(in_features=self.hidden_size,
                             out_features=self.output_size,
-                            bias=False) 
+                            bias=False)
 
     # forward function
     # the function assumes an input dimension of [batch_size, seq_len, hidden_size]
@@ -128,7 +130,7 @@ class RFRNN2(nn.Module):
             input_t = x[:, t, :]
 
             # compute the output from the activation function and update the hidden state
-            v_in = self.wt2 * (self.wt1(input_t) + h_t_minus_1 + self.b)
+            v_in = self.wt1(input_t) + self.wt2(h_t_minus_1) + self.b
             h_t_minus_1 = self.act_func(v_in)
 
             # (DEBUG: 03052026) V_in, V_out tracking

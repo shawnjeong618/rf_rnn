@@ -76,9 +76,9 @@ def evaluate(loader, model):
         logits = model(x)
         
         # (03182026) add penalty term
-        # lambda_1 = 1.0
-        # loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 2)
-        loss = crit(logits, y)
+        lambda_1 = 1.0
+        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 2)
+        #loss = crit(logits, y)
         
         b = x.size(0)
         tot_loss += loss.item() * b
@@ -94,9 +94,9 @@ def train_one_epoch():
         logits = model(x)
 
         # (03182026) add penalty term
-        # lambda_1 = 1.0
-        # loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 2)
-        loss = crit(logits, y)
+        lambda_1 = 1.0
+        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 2)
+        #loss = crit(logits, y)
 
         opt.zero_grad(); loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)

@@ -47,7 +47,7 @@ model = RFRNN(hidden_size, seq_len, output_size).to(device)
 #     model.act_func.w_to_l.copy_(torch.tensor([0.9627, 1.2584, 1.2450, 1.1573, 1.1016, 1.2271, 1.1092, 1.3732], device=device, dtype=model.act_func.w_to_l.dtype))
 #     model.act_func.v_b.copy_(torch.tensor([0.0438, -0.0784, -0.0406,  0.0305, -0.0824,  0.0498,  0.0058, -0.0460], device=device, dtype=model.act_func.v_b.dtype))
 
-opt = torch.optim.Adam(model.parameters(), lr=3e-4)
+opt = torch.optim.Adam(model.parameters(), lr=1e-4)
 crit = nn.CrossEntropyLoss()
 
 # verify model weight initialization

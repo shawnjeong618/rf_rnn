@@ -13,11 +13,14 @@ hidden_size = 8
 seq_len = 100
 output_size = 2
 
+# hyperparameters
+lambda_1 = 1.0
+
 
 # training variables
 SEED = 0            # determinism
 BATCH_SIZE = 128
-EPOCHS = 100
+EPOCHS = 200
 
 # deterministic CUDA
 torch.manual_seed(SEED)
@@ -76,8 +79,8 @@ def evaluate(loader, model):
         logits = model(x)
         
         # (03182026) add penalty term
-        lambda_1 = 1.0
-        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 2)
+        #loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 4)
+        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -1.5, 1.5, 4)
         #loss = crit(logits, y)
         
         b = x.size(0)
@@ -94,8 +97,8 @@ def train_one_epoch():
         logits = model(x)
 
         # (03182026) add penalty term
-        lambda_1 = 1.0
-        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 2)
+        #loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -model.abs_v_th, model.v_dd, 4)
+        loss = crit(logits, y) + lambda_1 * polynomial_penalty(model.b, -1.5, 1.5, 4)
         #loss = crit(logits, y)
 
         opt.zero_grad(); loss.backward()

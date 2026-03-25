@@ -16,8 +16,8 @@ class RFRNN(nn.Module):
         self.output_size = output_size
 
         # activation function
-        # self.act_func = RFRNNActivation(hidden_size=hidden_size, v_b=-0.3, w_to_l=2.0)
-        self.act_func = RFRNNActivation2(hidden_size=hidden_size, v_b=-0.3, w_to_l=1.0)
+        self.act_func = RFRNNActivation(hidden_size=hidden_size, v_b=-0.3, w_to_l=2.0)
+        # self.act_func = RFRNNActivation2(hidden_size=hidden_size, v_b=-0.3, w_to_l=1.0)
 
         # model parameter intialization
         # (1) W_t1: input-to-hidden_state weight

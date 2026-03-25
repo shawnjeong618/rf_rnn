@@ -19,12 +19,11 @@ class RFRNNActivation(nn.Module):
         self.v_dd = v_dd            # V_dd
 
         # # (case 1): trainable parameter
-        # self.v_b = nn.Parameter((self.v_dd + self.abs_v_th) * torch.rand((hidden_size,))
-        #                         - self.abs_v_th)
+        self.v_b = nn.Parameter((self.v_dd + self.abs_v_th) * (torch.rand((hidden_size,)) - 0.5))
         # self.w_to_l = nn.Parameter(10 * torch.rand((hidden_size,)))
 
         # (case 2): fixed parameter
-        self.register_buffer("v_b", torch.full(size=(hidden_size,), fill_value=v_b))
+        # self.register_buffer("v_b", torch.full(size=(hidden_size,), fill_value=v_b))
         self.register_buffer("w_to_l", torch.full(size=(hidden_size,), fill_value=w_to_l))
 
     # forward pass
@@ -112,27 +111,27 @@ class RFRNNActivation2(nn.Module):
     
 
 # TESTING
-# hidden_size = 4
-# init_v_b = -0.2
-# act_fnc = RFRNNActivation(hidden_size=hidden_size, v_b=init_v_b)
-# act_fnc_2 = RFRNNActivation2(hidden_size=hidden_size)
+hidden_size = 4
+init_v_b = -0.2
+act_fnc = RFRNNActivation(hidden_size=hidden_size, v_b=init_v_b)
+act_fnc_2 = RFRNNActivation2(hidden_size=hidden_size)
 
-# batch_size = 2
-# seq_len = 5
+batch_size = 2
+seq_len = 5
 
-# data = 0.0 * torch.ones((batch_size, seq_len, hidden_size), requires_grad=True)
+data = 1.0 * torch.rand((batch_size, seq_len, hidden_size), requires_grad=True)
 
-# x1 = torch.zeros_like(data[:, -1, :])
-# x2 = torch.zeros_like(x1)
-# y1 = torch.zeros_like(x1, requires_grad=True)
-# y2 = torch.zeros_like(y1, requires_grad=True)
-# for i in range(seq_len):
-#     x_t = data[:, i, :]
-#     y1 = act_fnc.forward(x_t + x1)
-#     y2 = act_fnc_2.forward(x_t + x2)
-#     x1 = x_t
-#     x2 = x_t
+x1 = torch.zeros_like(data[:, -1, :])
+x2 = torch.zeros_like(x1)
+y1 = torch.zeros_like(x1, requires_grad=True)
+y2 = torch.zeros_like(y1, requires_grad=True)
+for i in range(seq_len):
+    x_t = data[:, i, :]
+    y1 = act_fnc.forward(x_t + x1)
+    y2 = act_fnc_2.forward(x_t + x2)
+    x1 = x_t
+    x2 = x_t
 
-# #print(data)
-# print(y2)
-# print(y2.backward(torch.ones_like(x1)), data.grad)
+#print(data)
+print(y1)
+#print(data.grad)
